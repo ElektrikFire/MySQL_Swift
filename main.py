@@ -35,7 +35,7 @@ class MyApp(App):
         self.input_field.bind(text=self.on_text_change)
         box.add_widget(self.input_field)
         
-        self.suggestion_label = Label(size_hint=(1, None), height=30, color=(1, 1, 1, 1))  # White color
+        self.suggestion_label = Label(size_hint=(1, None), height=30, markup=True)
         box.add_widget(self.suggestion_label)
         
         self.input_field.focus = True
@@ -70,8 +70,14 @@ class MyApp(App):
     
     def show_suggestion(self):
         if self.suggestions:
-            suggestion_text = self.suggestions[self.current_suggestion_index]
-            self.suggestion_label.text = suggestion_text
+            self.suggestion_label.text = ''
+            for i, suggestion in enumerate(self.suggestions):
+                if self.current_suggestion_index == i:
+                    # Highlight the current suggestion in yellow
+                    self.suggestion_label.text += f'[color=FFFF00]{suggestion}[/color] '
+                else:
+                    # Display other suggestions in white
+                    self.suggestion_label.text += f'[color=FFFFFF]{suggestion}[/color] '
 
     def on_key_down(self, instance, keyboard, keycode, text, modifiers):
         print(f"Keycode: {keycode}")
