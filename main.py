@@ -2,6 +2,7 @@ import pickle
 from os import system
 from kivy.core.window import Window
 
+query = ''
 with open("keywords.dat", 'rb') as f:
     keywords: tuple = pickle.load(f)
     print(keywords)
@@ -61,23 +62,16 @@ class MyApp(App):
             self.show_suggestion()
         else:
             self.suggestion_label.text = ''
-        
-        words = (i.upper() for i in text.split()[:-1])
-        for i in words:
-            if i not in keywords:
-                keywords = (i,) + keywords
-                print(i)
     
     def show_suggestion(self):
+        self.suggestion_label.text = ''
         if self.suggestions:
-            self.suggestion_label.text = ''
             for i, suggestion in enumerate(self.suggestions):
                 if self.current_suggestion_index == i:
-                    # Highlight the current suggestion in yellow
-                    self.suggestion_label.text += f'[color=FFFF00]{suggestion}[/color] '
+                    self.suggestion_label.text += f'[color=FFFF00]{suggestion}[/color]  '
                 else:
-                    # Display other suggestions in white
-                    self.suggestion_label.text += f'[color=FFFFFF]{suggestion}[/color] '
+                    self.suggestion_label.text += f'[color=FFFFFF]{suggestion}[/color]  '
+            
 
     def on_key_down(self, instance, keyboard, keycode, text, modifiers):
         print(f"Keycode: {keycode}")
@@ -90,6 +84,11 @@ class MyApp(App):
             self.show_suggestion()
         elif keycode == 43:  # Tab key
             self.insert_suggestion(self.input_field)
+        elif keycode == 41:  # ESC
+            print('esc')
+            self.suggestions = []
+            self.current_suggestion_index = 0
+            self.show_suggestion()
 
     def insert_suggestion(self, instance):
         suggestion = self.suggestions[self.current_suggestion_index]
@@ -111,6 +110,9 @@ class MyApp(App):
         else:
             self.copy_to_clipboard(instance.text)
             self.suggestion_label.text = '^.^'
+            global query
+            query = instance.text
+            if query[-1] == ';': query = query[:-1]
         
         # Schedule refocusing the input field
         from kivy.clock import Clock
@@ -124,6 +126,13 @@ class MyApp(App):
 
 if __name__ == "__main__":
     MyApp().run()
+    
+    cmds = query.split()
+    words = [i.upper() for i in cmds]
+    for i in words:
+        if i not in keywords:
+            keywords = (i,) + keywords
+            print(i)
 
     with open("keywords.dat", 'wb') as f:
         pickle.dump(keywords, f)
