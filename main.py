@@ -1,6 +1,5 @@
 import pickle
 from os import system
-from kivy.core.window import Window
 
 query = ''
 with open("keywords.dat", 'rb') as f:
@@ -21,6 +20,7 @@ Config.set('graphics', 'width', '400')
 Config.set('graphics', 'height', '100')
 Config.write()
 
+from kivy.core.window import Window
 from kivy.app import App
 from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
@@ -76,7 +76,7 @@ class MySQL_SwiftApp(App):
             
 
     def on_key_down(self, instance, keyboard, keycode, text, modifiers):
-        print(f'keycode: {keycode}')
+        # print(f'keycode: {keycode}')
         if not self.suggestions and self.user_queries == tuple(''): return
         if keycode == 80:  # Left arrow
             self.cur_sug_index = (self.cur_sug_index - 1) % len(self.suggestions)
@@ -86,11 +86,14 @@ class MySQL_SwiftApp(App):
             self.show_suggestion()
         elif keycode == 43:  # Tab key
             self.input_field.text = ([''] + self.user_queries).pop()
+            def trim(dt):
+                self.input_field.text = self.input_field.text[:-1]
+            self.schedule_call(trim)
         elif keycode == 41 and self.suggestions:  # ESC
             self.suggestions = []
             self.cur_sug_index = 0
             self.show_suggestion()
-            self.refocus()
+            self.schedule_call(self.refocus_action)
 
     def insert_suggestion(self, instance):
         suggestion = self.suggestions[self.cur_sug_index]
@@ -108,7 +111,7 @@ class MySQL_SwiftApp(App):
     def on_enter(self, instance):
         if self.suggestions:
             self.insert_suggestion(instance)
-        else:
+        elif instance.text:
             self.copy_to_clipboard(instance.text)
             global query
             query = instance.text
@@ -118,12 +121,12 @@ class MySQL_SwiftApp(App):
             self.input_field.text = ''
             self.suggestion_label.text = '^.^'
         
-        self.refocus()
+        self.schedule_call(self.refocus_action)
     
-    def refocus(self):
+    def schedule_call(self, fn):
         # Schedule refocusing the input field
         from kivy.clock import Clock
-        Clock.schedule_once(self.refocus_action, 0)
+        Clock.schedule_once(fn, 0)
 
     def refocus_action(self, dt):
         self.input_field.focus = True
