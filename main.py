@@ -27,11 +27,11 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.core.clipboard import Clipboard
 
-class MyApp(App):
+class MySQL_SwiftApp(App):
     def build(self):
         box = BoxLayout(orientation='vertical')
 
-        self.input_field = TextInput(hint_text='Type SQL query...', size_hint=(1, 1), multiline=False)
+        self.input_field: TextInput = TextInput(hint_text='Type SQL query...', size_hint=(1, 1), multiline=False)
         self.input_field.bind(on_text_validate=self.on_enter)
         self.input_field.bind(text=self.on_text_change)
         box.add_widget(self.input_field)
@@ -39,10 +39,12 @@ class MyApp(App):
         self.suggestion_label = Label(size_hint=(1, None), height=30, markup=True)
         box.add_widget(self.suggestion_label)
         
-        self.input_field.focus = True
+        self.refocus_action(0)
 
         self.suggestions = []
-        self.current_suggestion_index = 0
+        self.cur_sug_index = 0
+        self.user_queries = []
+        self.cur_query_index = -1
 
         # Bind the key down event to the Window
         Window.bind(on_key_down=self.on_key_down)
@@ -58,7 +60,7 @@ class MyApp(App):
         self.suggestions = [keyword for keyword in keywords if keyword.startswith(word)]
 
         if self.suggestions:
-            self.current_suggestion_index = 0
+            self.cur_sug_index = 0
             self.show_suggestion()
         else:
             self.suggestion_label.text = ''
@@ -67,34 +69,33 @@ class MyApp(App):
         self.suggestion_label.text = ''
         if self.suggestions:
             for i, suggestion in enumerate(self.suggestions):
-                if self.current_suggestion_index == i:
+                if self.cur_sug_index == i:
                     self.suggestion_label.text += f'[color=FFFF00]{suggestion}[/color]  '
                 else:
                     self.suggestion_label.text += f'[color=FFFFFF]{suggestion}[/color]  '
             
 
     def on_key_down(self, instance, keyboard, keycode, text, modifiers):
-        print(f"Keycode: {keycode}")
-        if not self.suggestions: return
-        if keycode in (80, 81):  # Down/Left arrow
-            self.current_suggestion_index = (self.current_suggestion_index - 1) % len(self.suggestions)
+        print(f'keycode: {keycode}')
+        if not self.suggestions and self.user_queries == tuple(''): return
+        if keycode == 80:  # Left arrow
+            self.cur_sug_index = (self.cur_sug_index - 1) % len(self.suggestions)
             self.show_suggestion()
-        elif keycode in (79, 82):  # Up/Right arrow
-            self.current_suggestion_index = (self.current_suggestion_index + 1) % len(self.suggestions)
+        elif keycode == 79:  # Right arrow
+            self.cur_sug_index = (self.cur_sug_index + 1) % len(self.suggestions)
             self.show_suggestion()
         elif keycode == 43:  # Tab key
-            self.insert_suggestion(self.input_field)
-        elif keycode == 41:  # ESC
-            print('esc')
+            self.input_field.text = ([''] + self.user_queries).pop()
+        elif keycode == 41 and self.suggestions:  # ESC
             self.suggestions = []
-            self.current_suggestion_index = 0
+            self.cur_sug_index = 0
             self.show_suggestion()
+            self.refocus()
 
     def insert_suggestion(self, instance):
-        suggestion = self.suggestions[self.current_suggestion_index]
+        suggestion = self.suggestions[self.cur_sug_index]
         global keywords
         keywords_list = list(keywords)
-        print("here")
         if suggestion in keywords_list:
             keywords_list.remove(suggestion)
         keywords = (suggestion,) + tuple(keywords_list)
@@ -109,26 +110,31 @@ class MyApp(App):
             self.insert_suggestion(instance)
         else:
             self.copy_to_clipboard(instance.text)
-            self.suggestion_label.text = '^.^'
             global query
             query = instance.text
+            self.user_queries += [query]
+            print(self.user_queries)
             if query[-1] == ';': query = query[:-1]
+            self.input_field.text = ''
+            self.suggestion_label.text = '^.^'
         
+        self.refocus()
+    
+    def refocus(self):
         # Schedule refocusing the input field
         from kivy.clock import Clock
-        Clock.schedule_once(self.refocus_input, 0)
+        Clock.schedule_once(self.refocus_action, 0)
 
-    def refocus_input(self, dt):
+    def refocus_action(self, dt):
         self.input_field.focus = True
 
     def copy_to_clipboard(self, text):
         Clipboard.copy(text)
 
 if __name__ == "__main__":
-    MyApp().run()
+    MySQL_SwiftApp().run()
     
-    cmds = query.split()
-    words = [i.upper() for i in cmds]
+    words = [i.upper() for i in query.split()]
     for i in words:
         if i not in keywords:
             keywords = (i,) + keywords
